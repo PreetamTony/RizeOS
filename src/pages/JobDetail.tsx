@@ -1,29 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  DollarSign, 
-  Clock, 
-  Building2, 
-  ExternalLink,
-  Share2,
-  Bookmark,
-  Sparkles
-} from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAI } from '@/hooks/useAI';
-import type { Job, MatchResult } from '@/types';
 import api from '@/services/api';
+import type { Job, MatchResult } from '@/types';
+import {
+  ArrowLeft,
+  Bookmark,
+  Building2,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Share2,
+  Sparkles
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 
 const JobDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { isAuthenticated } = useAuth();
-  const { getMatchScore, isMatching } = useAI();
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
@@ -31,7 +31,7 @@ const JobDetail: React.FC = () => {
   useEffect(() => {
     const fetchJob = async () => {
       if (!id) return;
-      
+
       setIsLoading(true);
       try {
         const response = await api.getJobById(id);
@@ -48,12 +48,58 @@ const JobDetail: React.FC = () => {
     fetchJob();
   }, [id]);
 
-  const handleGetMatchScore = async () => {
-    if (!id) return;
-    const result = await getMatchScore(id);
-    if (result) {
-      setMatchResult(result);
-    }
+  const [resumeText, setResumeText] = useState('');
+  const [isMatching, setIsMatching] = useState(false);
+
+  const handleCalculateMatch = async () => {
+    if (!job || !resumeText.trim()) return;
+
+    setIsMatching(true);
+
+    // Simulate AI processing delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const jobSkills = job.skills || [];
+    const resumeLower = resumeText.toLowerCase();
+
+    // Find matched skills
+    const matchedSkills = jobSkills.filter(skill =>
+      resumeLower.includes(skill.toLowerCase())
+    );
+
+    // Find missing skills
+    const missingSkills = jobSkills.filter(skill =>
+      !resumeLower.includes(skill.toLowerCase())
+    );
+
+    // Calculate score based on skills (70%) and keyword overlap (30%)
+    const skillScore = jobSkills.length > 0
+      ? (matchedSkills.length / jobSkills.length) * 100
+      : 0;
+
+    // Simple keyword overlap for description (very basic)
+    const jobKeywords = job.description
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(w => w.length > 4) // Filter out short words
+      .slice(0, 20); // Top 20 keywords
+
+    const matchedKeywords = jobKeywords.filter(word => resumeLower.includes(word));
+    const keywordScore = jobKeywords.length > 0
+      ? (matchedKeywords.length / jobKeywords.length) * 100
+      : 0;
+
+    // Weighted final score
+    const finalScore = Math.round((skillScore * 0.7) + (keywordScore * 0.3));
+
+    setMatchResult({
+      score: finalScore,
+      matchedSkills,
+      missingSkills,
+      recommendations: []
+    });
+
+    setIsMatching(false);
   };
 
   const formatBudget = (budget: Job['budget']) => {
@@ -103,8 +149,8 @@ const JobDetail: React.FC = () => {
     <AppLayout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Link */}
-        <Link 
-          to="/jobs" 
+        <Link
+          to="/jobs"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -153,8 +199,8 @@ const JobDetail: React.FC = () => {
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>
-                Posted {new Date(job.createdAt).toLocaleDateString('en-US', { 
-                  month: 'long', 
+                Posted {new Date(job.createdAt).toLocaleDateString('en-US', {
+                  month: 'long',
                   day: 'numeric',
                   year: 'numeric'
                 })}
@@ -185,7 +231,7 @@ const JobDetail: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {job.requiredSkills.map((skill) => (
+                  {(job.skills || []).map((skill) => (
                     <Badge key={skill} variant="skill" className="text-sm py-1.5 px-3">
                       {skill}
                     </Badge>
@@ -238,25 +284,39 @@ const JobDetail: React.FC = () => {
                       <Sparkles className="w-4 h-4 text-accent" />
                       <span className="font-medium">AI Match Score</span>
                     </div>
-                    
+
                     {matchResult ? (
-                      <div className="space-y-3">
+                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Match Score</span>
+                          <Button variant="ghost" size="sm" onClick={() => setMatchResult(null)} className="h-auto p-0 text-muted-foreground hover:text-foreground">
+                            Reset
+                          </Button>
+                        </div>
+
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
+                            <div
+                              className={`h-full rounded-full transition-all duration-1000 ease-out ${matchResult.score >= 80 ? 'bg-success' :
+                                matchResult.score >= 50 ? 'bg-warning' : 'bg-destructive'
+                                }`}
                               style={{ width: `${matchResult.score}%` }}
                             />
                           </div>
-                          <span className="font-bold text-lg">{matchResult.score}%</span>
+                          <span className={`font-bold text-lg ${matchResult.score >= 80 ? 'text-success' :
+                            matchResult.score >= 50 ? 'text-warning' : 'text-destructive'
+                            }`}>
+                            {matchResult.score}%
+                          </span>
                         </div>
-                        
+
                         {matchResult.matchedSkills.length > 0 && (
                           <div>
-                            <p className="text-sm text-muted-foreground mb-1">Matching skills:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {matchResult.matchedSkills.slice(0, 5).map((skill) => (
+                            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Matched Skills</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {matchResult.matchedSkills.map((skill) => (
                                 <Badge key={skill} variant="success" className="text-xs">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
                                   {skill}
                                 </Badge>
                               ))}
@@ -266,26 +326,49 @@ const JobDetail: React.FC = () => {
 
                         {matchResult.missingSkills.length > 0 && (
                           <div>
-                            <p className="text-sm text-muted-foreground mb-1">Skills to improve:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {matchResult.missingSkills.slice(0, 3).map((skill) => (
-                                <Badge key={skill} variant="warning" className="text-xs">
+                            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Missing Skills</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {matchResult.missingSkills.map((skill) => (
+                                <Badge key={skill} variant="outline" className="text-xs border-dashed">
                                   {skill}
                                 </Badge>
                               ))}
                             </div>
                           </div>
                         )}
+
+                        <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                          {matchResult.score >= 80 ? "Great match! You should definitely apply." :
+                            matchResult.score >= 50 ? "Good potential. Highlight your transferable skills." :
+                              "This role might be a stretch. Consider upskilling."}
+                        </div>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={handleGetMatchScore}
-                        disabled={isMatching}
-                      >
-                        {isMatching ? 'Calculating...' : 'Check Match Score'}
-                      </Button>
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Paste your resume or bio to check your compatibility with this role.
+                        </p>
+                        <textarea
+                          className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          placeholder="Paste your resume text or bio here..."
+                          value={resumeText}
+                          onChange={(e) => setResumeText(e.target.value)}
+                        />
+                        <Button
+                          className="w-full"
+                          onClick={handleCalculateMatch}
+                          disabled={!resumeText.trim() || isMatching}
+                        >
+                          {isMatching ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            'Check Match Score'
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -297,8 +380,8 @@ const JobDetail: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                         {job.postedByUser.avatarUrl ? (
-                          <img 
-                            src={job.postedByUser.avatarUrl} 
+                          <img
+                            src={job.postedByUser.avatarUrl}
                             alt={job.postedByUser.displayName}
                             className="w-full h-full rounded-full object-cover"
                           />

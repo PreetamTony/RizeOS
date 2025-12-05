@@ -1,28 +1,30 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Menu, 
-  X, 
-  Briefcase, 
-  Users, 
-  PlusCircle, 
-  Sparkles, 
-  User,
-  LogIn,
-  Wallet,
-  LogOut,
-  ChevronDown
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/hooks/useWallet';
 import { cn } from '@/lib/utils';
+import {
+  Briefcase,
+  ChevronDown,
+  LogIn,
+  LogOut,
+  Menu,
+  MessageSquare,
+  PlusCircle,
+  Sparkles,
+  User,
+  Users,
+  Wallet,
+  X
+} from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
   { href: '/feed', label: 'Feed', icon: Users },
   { href: '/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/post-job', label: 'Post a Job', icon: PlusCircle, protected: true },
   { href: '/ai-suite', label: 'AI Suite', icon: Sparkles, protected: true },
+  { href: '/mock-interview', label: 'Mock Interview', icon: MessageSquare, protected: true },
   { href: '/profile', label: 'Profile', icon: User, protected: true },
 ];
 
@@ -51,16 +53,20 @@ export const Navbar: React.FC = () => {
         <div className="mt-4 rounded-2xl bg-card/70 backdrop-blur-xl border border-border/50 shadow-lg">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6">
             {/* Logo */}
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="flex items-center gap-2 group"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md group-hover:shadow-glow transition-shadow duration-300">
-                <Briefcase className="w-5 h-5 text-primary-foreground" />
+              <div className="flex items-center gap-2">
+                <img 
+                  src="/logo.png" 
+                  alt="JobMate Logo" 
+                  className="w-9 h-9 object-contain"
+                />
+                <span className="text-xl font-bold font-display gradient-text">
+                  JobMate
+                </span>
               </div>
-              <span className="text-xl font-bold font-display gradient-text">
-                JobMate
-              </span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -68,7 +74,7 @@ export const Navbar: React.FC = () => {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
-                
+
                 return (
                   <Link
                     key={item.href}
@@ -76,8 +82,8 @@ export const Navbar: React.FC = () => {
                     onClick={(e) => handleNavClick(item, e)}
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-                      isActive 
-                        ? "bg-primary/10 text-primary" 
+                      isActive
+                        ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
@@ -159,7 +165,7 @@ export const Navbar: React.FC = () => {
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.href;
-                  
+
                   return (
                     <Link
                       key={item.href}
@@ -167,8 +173,8 @@ export const Navbar: React.FC = () => {
                       onClick={(e) => handleNavClick(item, e)}
                       className={cn(
                         "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-                        isActive 
-                          ? "bg-primary/10 text-primary" 
+                        isActive
+                          ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       )}
                     >
@@ -177,9 +183,9 @@ export const Navbar: React.FC = () => {
                     </Link>
                   );
                 })}
-                
+
                 <div className="h-px bg-border my-2" />
-                
+
                 {/* Mobile Wallet */}
                 {connected && address ? (
                   <button
@@ -199,7 +205,7 @@ export const Navbar: React.FC = () => {
                     Connect Wallet
                   </Link>
                 )}
-                
+
                 {/* Mobile Auth */}
                 {isAuthenticated ? (
                   <button

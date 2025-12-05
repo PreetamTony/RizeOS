@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Briefcase, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { Briefcase, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { login, signup, loginWithGoogle, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
@@ -20,19 +21,28 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
-    
-    if (isLogin) {
-      await login(email, password);
-    } else {
-      await signup(email, password);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+        navigate('/profile');
+      } else {
+        await signup(email, password, name);
+        navigate('/profile');
+      }
+    } catch (err) {
+      // Error is handled in AuthContext
     }
-    
-    // If successful, navigate will happen via auth state change
   };
 
   const handleGoogleLogin = async () => {
     clearError();
-    await loginWithGoogle();
+    try {
+      await loginWithGoogle();
+      navigate('/profile');
+    } catch (err) {
+      // Error is handled in AuthContext
+    }
   };
 
   return (
@@ -41,7 +51,7 @@ const Login: React.FC = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
-      
+
       <div className="relative w-full max-w-md animate-fade-in">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
@@ -59,16 +69,16 @@ const Login: React.FC = () => {
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </CardTitle>
             <CardDescription>
-              {isLogin 
-                ? 'Sign in to access your account and find opportunities' 
+              {isLogin
+                ? 'Sign in to access your account and find opportunities'
                 : 'Join JobMate and start your journey to success'}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Google Sign In */}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full h-12 gap-3"
               onClick={handleGoogleLogin}
               disabled={isLoading}
@@ -107,6 +117,25 @@ const Login: React.FC = () => {
 
             {/* Email/Password Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Email
@@ -162,9 +191,9 @@ const Login: React.FC = () => {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                variant="hero" 
+              <Button
+                type="submit"
+                variant="hero"
                 className="w-full h-12"
                 disabled={isLoading}
               >

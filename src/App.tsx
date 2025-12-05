@@ -1,22 +1,23 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 // Pages
-import Index from "./pages/Index";
-import Login from "./pages/Login";
+import AiSuite from "./pages/AiSuite";
 import ConnectWallet from "./pages/ConnectWallet";
-import Jobs from "./pages/Jobs";
-import JobDetail from "./pages/JobDetail";
 import Feed from "./pages/Feed";
+import Index from "./pages/Index";
+import JobDetail from "./pages/JobDetail";
+import Jobs from "./pages/Jobs";
+import Login from "./pages/Login";
+import MockInterview from "./pages/MockInterview";
+import NotFound from "./pages/NotFound";
 import PostJob from "./pages/PostJob";
 import Profile from "./pages/Profile";
-import AiSuite from "./pages/AiSuite";
-import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +35,7 @@ const App = () => (
             <Route path="/connect-wallet" element={<ConnectWallet />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
-            
+
             {/* Protected Routes */}
             <Route
               path="/feed"
@@ -68,7 +69,15 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            
+            <Route
+              path="/mock-interview"
+              element={
+                <ProtectedRoute>
+                  <MockInterview />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Catch-all 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

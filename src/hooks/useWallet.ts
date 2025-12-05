@@ -1,13 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { WalletState, WalletType, ChainType } from '@/types';
+import type { ChainType, WalletState, WalletType } from '@/types';
+import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, clusterApiUrl } from '@solana/web3.js';
+import { useCallback, useEffect, useState } from 'react';
 
 // Platform fee from environment
 const PLATFORM_FEE_WEI = import.meta.env.VITE_PLATFORM_FEE_WEI || '10000000000000'; // 0.00001 ETH
+const PLATFORM_FEE_SOL = 0.0001; // 0.0001 SOL
 const DEFAULT_CHAIN = (import.meta.env.VITE_DEFAULT_CHAIN || 'evm') as ChainType;
 
 // Admin wallet addresses (from environment in production)
 const ADMIN_WALLET_EVM = import.meta.env.VITE_ADMIN_WALLET_EVM || '0x0000000000000000000000000000000000000000';
-const ADMIN_WALLET_SOLANA = import.meta.env.VITE_ADMIN_WALLET_SOLANA || '';
+const ADMIN_WALLET_SOLANA = import.meta.env.VITE_ADMIN_WALLET_SOLANA || '11111111111111111111111111111111'; // Replace with real admin wallet
 
 interface UseWalletReturn extends WalletState {
   connect: (walletType: WalletType) => Promise<boolean>;
@@ -31,6 +33,7 @@ declare global {
       connect: () => Promise<{ publicKey: { toString: () => string } }>;
       disconnect: () => Promise<void>;
       on: (event: string, callback: (...args: unknown[]) => void) => void;
+      signTransaction: (transaction: Transaction) => Promise<Transaction>;
     };
   }
 }
@@ -67,6 +70,42 @@ export const useWallet = (): UseWalletReturn => {
     }
   }, [state.walletType]);
 
+  // Check for existing connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (typeof window !== 'undefined' && window.ethereum?.isMetaMask) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+          if (accounts.length > 0) {
+            const balanceHex = await window.ethereum.request({
+              method: 'eth_getBalance',
+              params: [accounts[0], 'latest'],
+            }) as string;
+
+            const balanceWei = parseInt(balanceHex, 16);
+            const balanceEth = (balanceWei / 1e18).toFixed(4);
+
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+            const isTestnet = chainId !== '0x1';
+
+            setState({
+              connected: true,
+              address: accounts[0],
+              balance: `${balanceEth} ETH`,
+              chain: 'evm',
+              walletType: 'metamask',
+              isTestnet,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking existing connection:', error);
+        }
+      }
+    };
+
+    checkConnection();
+  }, []);
+
   const connect = useCallback(async (walletType: WalletType): Promise<boolean> => {
     try {
       if (walletType === 'metamask') {
@@ -84,7 +123,7 @@ export const useWallet = (): UseWalletReturn => {
             method: 'eth_getBalance',
             params: [accounts[0], 'latest'],
           }) as string;
-          
+
           const balanceWei = parseInt(balanceHex, 16);
           const balanceEth = (balanceWei / 1e18).toFixed(4);
 
@@ -92,7 +131,7 @@ export const useWallet = (): UseWalletReturn => {
           const chainId = await window.ethereum.request({
             method: 'eth_chainId',
           }) as string;
-          
+
           // Mainnet is 0x1, testnets are others
           const isTestnet = chainId !== '0x1';
 
@@ -115,18 +154,32 @@ export const useWallet = (): UseWalletReturn => {
         const response = await window.solana.connect();
         const address = response.publicKey.toString();
 
-        // TODO: Get Solana balance using @solana/web3.js
-        // const connection = new Connection(clusterApiUrl('devnet'));
-        // const balance = await connection.getBalance(new PublicKey(address));
+        // Get Solana balance
+        try {
+          const connection = new Connection(clusterApiUrl('devnet'));
+          const balanceLamports = await connection.getBalance(new PublicKey(address));
+          const balanceSol = (balanceLamports / LAMPORTS_PER_SOL).toFixed(4);
 
-        setState({
-          connected: true,
-          address,
-          balance: '0 SOL', // Placeholder - implement with @solana/web3.js
-          chain: 'solana',
-          walletType: 'phantom',
-          isTestnet: true, // Default to devnet
-        });
+          setState({
+            connected: true,
+            address,
+            balance: `${balanceSol} SOL`,
+            chain: 'solana',
+            walletType: 'phantom',
+            isTestnet: true, // Default to devnet
+          });
+        } catch (err) {
+          console.error('Error fetching Solana balance:', err);
+          // Fallback if connection fails
+          setState({
+            connected: true,
+            address,
+            balance: '0 SOL',
+            chain: 'solana',
+            walletType: 'phantom',
+            isTestnet: true,
+          });
+        }
 
         return true;
       }
@@ -142,7 +195,7 @@ export const useWallet = (): UseWalletReturn => {
     if (state.walletType === 'phantom' && window.solana) {
       window.solana.disconnect();
     }
-    
+
     setState({
       connected: false,
       address: null,
@@ -156,7 +209,7 @@ export const useWallet = (): UseWalletReturn => {
   const switchNetwork = useCallback(async (testnet: boolean) => {
     if (state.walletType === 'metamask' && window.ethereum) {
       try {
-        const chainId = testnet ? '0x5' : '0x1'; // Goerli or Mainnet
+        const chainId = testnet ? '0xaa36a7' : '0x1'; // Sepolia or Mainnet
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId }],
@@ -187,20 +240,26 @@ export const useWallet = (): UseWalletReturn => {
         }) as string;
 
         return { txHash };
-      } else if (state.chain === 'solana') {
-        // TODO: Implement Solana transaction using @solana/web3.js
-        // const connection = new Connection(clusterApiUrl('devnet'));
-        // const transaction = new Transaction().add(
-        //   SystemProgram.transfer({
-        //     fromPubkey: new PublicKey(state.address),
-        //     toPubkey: new PublicKey(ADMIN_WALLET_SOLANA),
-        //     lamports: LAMPORTS_PER_SOL * 0.0001,
-        //   })
-        // );
-        // const signature = await sendTransaction(transaction, connection);
-        
-        console.log('TODO: Implement Solana payment');
-        throw new Error('Solana payments not yet implemented');
+      } else if (state.chain === 'solana' && window.solana) {
+        const connection = new Connection(clusterApiUrl('devnet'));
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: new PublicKey(state.address),
+            toPubkey: new PublicKey(ADMIN_WALLET_SOLANA),
+            lamports: LAMPORTS_PER_SOL * PLATFORM_FEE_SOL,
+          })
+        );
+
+        const { blockhash } = await connection.getLatestBlockhash();
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = new PublicKey(state.address);
+
+        const signed = await window.solana.signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signed.serialize());
+
+        await connection.confirmTransaction(signature);
+
+        return { txHash: signature };
       }
 
       return null;

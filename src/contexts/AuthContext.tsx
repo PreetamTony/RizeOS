@@ -1,14 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { User } from '@/types';
+// src/contexts/AuthContext.tsx
+import { auth } from '@/lib/firebase';
 import api from '@/services/api';
-
-// Firebase configuration from environment
-// TODO: Initialize Firebase with these config values
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-};
+import type { User } from '@/types';
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup
+} from 'firebase/auth';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
   user: User | null;
@@ -17,8 +19,8 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
 }
@@ -34,54 +36,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
         try {
-          const response = await api.getCurrentUser();
+          const idToken = await firebaseUser.getIdToken();
+          const response = await api.exchangeFirebaseToken(idToken);
           if (response.data) {
-            setUser(response.data);
+            localStorage.setItem('auth_token', response.data.token);
+            setUser(response.data.user);
           } else {
-            // Token invalid, clear it
+            console.error('Backend authentication failed:', response.error);
             localStorage.removeItem('auth_token');
+            setUser(null);
           }
         } catch (err) {
+          console.error('Failed to authenticate with backend:', err);
           localStorage.removeItem('auth_token');
+          setUser(null);
         }
+      } else {
+        localStorage.removeItem('auth_token');
+        setUser(null);
       }
       setIsLoading(false);
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const response = await api.getCurrentUser();
-    if (response.data) {
-      setUser(response.data);
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      try {
+        const response = await api.getCurrentUser();
+        if (response.data) {
+          setUser(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to refresh user:', err);
+        setUser(null);
+      }
     }
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // TODO: Implement Firebase email/password sign-in
-      // const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // const idToken = await userCredential.user.getIdToken();
-      
-      // For now, simulate the flow
-      // In production, this would be:
-      // const response = await api.exchangeFirebaseToken(idToken);
-      
-      console.log('TODO: Implement Firebase email/password login');
-      console.log('Firebase config:', firebaseConfig);
-      
-      // Placeholder - remove in production
-      setError('Firebase authentication not configured. Please set up Firebase credentials.');
-    } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      const response = await api.exchangeFirebaseToken(idToken);
+      if (response.data) {
+        localStorage.setItem('auth_token', response.data.token);
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.error || 'Backend authentication failed');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      let errorMessage = 'Login failed. Please check your credentials.';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        errorMessage = 'Invalid email or password.';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      setError(errorMessage);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -90,53 +111,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // TODO: Implement Firebase Google sign-in
-      // const provider = new GoogleAuthProvider();
-      // const userCredential = await signInWithPopup(auth, provider);
-      // const idToken = await userCredential.user.getIdToken();
-      // const response = await api.exchangeFirebaseToken(idToken);
-      
-      console.log('TODO: Implement Firebase Google login');
-      console.log('Firebase config:', firebaseConfig);
-      
-      // Placeholder - remove in production
-      setError('Firebase authentication not configured. Please set up Firebase credentials.');
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+      const response = await api.exchangeFirebaseToken(idToken);
+      if (response.data) {
+        localStorage.setItem('auth_token', response.data.token);
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.error || 'Backend authentication failed');
+      }
     } catch (err) {
       setError('Google login failed. Please try again.');
+      throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const signup = useCallback(async (email: string, password: string) => {
+  const signup = useCallback(async (email: string, password: string, name: string) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // TODO: Implement Firebase email/password sign-up
-      // const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // const idToken = await userCredential.user.getIdToken();
-      // const response = await api.exchangeFirebaseToken(idToken);
-      
-      console.log('TODO: Implement Firebase signup');
-      
-      // Placeholder - remove in production
-      setError('Firebase authentication not configured. Please set up Firebase credentials.');
-    } catch (err) {
-      setError('Signup failed. Please try again.');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+      // Update Firebase profile with name
+      if (auth.currentUser) {
+        const { updateProfile } = await import('firebase/auth');
+        await updateProfile(auth.currentUser, { displayName: name });
+      }
+
+      const idToken = await userCredential.user.getIdToken(true); // Force refresh to get updated token with name
+      const response = await api.exchangeFirebaseToken(idToken);
+      if (response.data) {
+        localStorage.setItem('auth_token', response.data.token);
+        setUser(response.data.user);
+      } else {
+        throw new Error(response.error || 'Backend authentication failed');
+      }
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      let errorMessage = 'Signup failed. Please try again.';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please login instead.';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (err.message) {
+        errorMessage = err.message.replace('Firebase: ', '').replace(' (auth/email-already-in-use).', '');
+      }
+      setError(errorMessage);
+      throw err;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    // TODO: Sign out from Firebase
-    // await signOut(auth);
-    
-    localStorage.removeItem('auth_token');
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await firebaseSignOut(auth);
+      localStorage.removeItem('auth_token');
+      setUser(null);
+    } catch (err) {
+      console.error('Error signing out:', err);
+      throw err;
+    }
   }, []);
 
   const clearError = useCallback(() => {

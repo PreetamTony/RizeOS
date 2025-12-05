@@ -8,20 +8,21 @@
  * - VITE_API_BASE_URL: Base URL for the backend API
  */
 
-import type { 
-  User, 
-  Job, 
-  JobFilters, 
-  Post, 
-  ApiResponse, 
-  PaginatedResponse,
-  SkillExtractionResult,
+import type {
+  ApiResponse,
+  Job,
+  JobFilters,
   MatchResult,
-  PaymentVerification
+  PaginatedResponse,
+  PaymentVerification,
+  Post,
+  SkillExtractionResult,
+  User
 } from '@/types';
 
 // API Base URL from environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.example.com';
+// API Base URL from environment or default to local Python backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Helper to get auth headers
 const getAuthHeaders = (): HeadersInit => {
@@ -34,7 +35,7 @@ const getAuthHeaders = (): HeadersInit => {
 
 // Generic fetch wrapper with error handling
 async function fetchApi<T>(
-  endpoint: string, 
+  endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
@@ -46,11 +47,14 @@ async function fetchApi<T>(
       },
     });
 
-    const data = await response.json();
+    const responseData = await response.json();
 
     if (!response.ok) {
-      return { error: data.message || 'An error occurred' };
+      return { error: responseData.message || responseData.detail || 'An error occurred' };
     }
+
+    // Unwrap data if it exists in the response, otherwise use the whole response
+    const data = responseData.data !== undefined ? responseData.data : responseData;
 
     return { data };
   } catch (error) {
@@ -85,7 +89,7 @@ export const exchangeFirebaseToken = async (
  * TODO: Backend returns user profile for authenticated user
  */
 export const getCurrentUser = async (): Promise<ApiResponse<User>> => {
-  return fetchApi('/users/me');
+  return fetchApi('/auth/me');
 };
 
 /**
@@ -105,13 +109,89 @@ export const createUserProfile = async (
  * Update user profile
  * TODO: Backend updates user profile
  */
+/**
+ * Update user profile
+ * Supports file uploads (resume, avatar)
+ */
 export const updateUserProfile = async (
-  updates: Partial<User>
+  updates: Partial<User> & { resume?: File; avatar?: File }
 ): Promise<ApiResponse<User>> => {
-  return fetchApi('/users/me', {
-    method: 'PATCH',
-    body: JSON.stringify(updates),
+  const formData = new FormData();
+
+  // Append text fields
+  Object.keys(updates).forEach(key => {
+    if (key !== 'resume' && key !== 'avatar' && updates[key as keyof typeof updates] !== undefined) {
+      const value = updates[key as keyof typeof updates];
+      if (Array.isArray(value) || typeof value === 'object') {
+        formData.append(key, JSON.stringify(value)); // Handle arrays/objects if needed, or flatten
+      } else {
+        formData.append(key, String(value));
+      }
+    }
   });
+
+  // Append files
+  if (updates.resume) {
+    formData.append('resume', updates.resume);
+  }
+  if (updates.avatar) {
+    formData.append('avatar', updates.avatar);
+  }
+
+  // Special handling for skills array if backend expects it as individual fields or JSON
+  // The backend controller maps req.body.skills directly. 
+  // If using FormData, arrays often need special handling (e.g. skills[] or JSON string)
+  // Let's send skills as a JSON string if it's an array, backend might need to parse it.
+  // Actually, let's check how we appended it above.
+  // If we append 'skills' as JSON.stringify(['a','b']), backend req.body.skills will be a string.
+  // We might need to ensure backend parses it.
+  // For now, let's assume backend can handle it or we adjust backend.
+  // To be safe, let's append skills individually if backend supports it, or as JSON.
+  // The current backend code: fieldsToUpdate['profile.skills'] = req.body.skills;
+  // If req.body.skills is a string "[...]", it might be saved as a string.
+  // Let's ensure we send it correctly.
+
+  // Re-doing the loop to be more specific
+  const finalFormData = new FormData();
+
+  if (updates.fullName) finalFormData.append('fullName', updates.fullName);
+  if (updates.displayName) finalFormData.append('displayName', updates.displayName);
+  if (updates.title) finalFormData.append('title', updates.title);
+  if (updates.bio) finalFormData.append('bio', updates.bio);
+  if (updates.linkedinUrl) finalFormData.append('linkedinUrl', updates.linkedinUrl);
+  if (updates.walletAddress) finalFormData.append('walletAddress', updates.walletAddress);
+
+  if (updates.skills) {
+    // Send as JSON string, backend might need to JSON.parse if it comes from FormData
+    // OR send as multiple fields
+    updates.skills.forEach(skill => finalFormData.append('skills', skill));
+  }
+
+  if (updates.resume) finalFormData.append('resume', updates.resume);
+  if (updates.avatar) finalFormData.append('avatar', updates.avatar);
+
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/updatedetails`, {
+      method: 'PUT',
+      headers, // Content-Type is auto-set
+      body: finalFormData,
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      return { error: responseData.message || responseData.detail || 'An error occurred' };
+    }
+
+    const data = responseData.data !== undefined ? responseData.data : responseData;
+    return { data };
+  } catch (error) {
+    console.error('API Error:', error);
+    return { error: 'Network error. Please try again.' };
+  }
 };
 
 // ============================================
@@ -129,7 +209,7 @@ export const getJobs = async (
 ): Promise<ApiResponse<PaginatedResponse<Job>>> => {
   const params = new URLSearchParams({
     page: page.toString(),
-    pageSize: pageSize.toString(),
+    limit: pageSize.toString(),
     ...(filters?.search && { search: filters.search }),
     ...(filters?.location && { location: filters.location }),
     ...(filters?.remote !== undefined && { remote: filters.remote.toString() }),
@@ -175,35 +255,76 @@ export const getRecommendedJobs = async (): Promise<ApiResponse<Job[]>> => {
 
 /**
  * Get feed posts
- * TODO: Backend returns paginated posts
  */
 export const getFeedPosts = async (
   page: number = 1,
   pageSize: number = 20
 ): Promise<ApiResponse<PaginatedResponse<Post>>> => {
-  return fetchApi(`/posts?page=${page}&pageSize=${pageSize}`);
+  return fetchApi(`/posts?page=${page}&limit=${pageSize}`);
 };
 
 /**
  * Create new post
- * TODO: Backend creates new post
  */
 export const createPost = async (
-  content: string
+  content: string,
+  user?: { id: string; displayName: string; avatarUrl?: string },
+  image?: File | null
 ): Promise<ApiResponse<Post>> => {
-  return fetchApi('/posts', {
-    method: 'POST',
-    body: JSON.stringify({ content }),
+  const formData = new FormData();
+  formData.append('content', content);
+  formData.append('author_id', user?.id || "user_123");
+  formData.append('author_name', user?.displayName || "Anonymous");
+  if (user?.avatarUrl) {
+    formData.append('author_avatar', user.avatarUrl);
+  }
+  if (image) {
+    formData.append('image', image);
+  }
+
+  // Note: Content-Type header should NOT be set manually when using FormData
+  // The browser sets it automatically with the boundary
+  const token = localStorage.getItem('auth_token');
+  const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      return { error: responseData.message || responseData.detail || 'An error occurred' };
+    }
+
+    const data = responseData.data !== undefined ? responseData.data : responseData;
+    return { data };
+  } catch (error) {
+    console.error('API Error:', error);
+    return { error: 'Network error. Please try again.' };
+  }
+};
+
+/**
+ * Delete a post
+ */
+export const deletePost = async (
+  postId: string
+): Promise<ApiResponse<void>> => {
+  return fetchApi(`/posts/${postId}`, {
+    method: 'DELETE',
   });
 };
 
 /**
  * Like/unlike a post
- * TODO: Backend toggles like status
  */
 export const togglePostLike = async (
   postId: string
-): Promise<ApiResponse<{ liked: boolean; likes: number }>> => {
+): Promise<ApiResponse<string[]>> => {
   return fetchApi(`/posts/${postId}/like`, {
     method: 'POST',
   });
@@ -211,7 +332,6 @@ export const togglePostLike = async (
 
 /**
  * Add comment to post
- * TODO: Backend adds comment
  */
 export const addComment = async (
   postId: string,
@@ -219,7 +339,11 @@ export const addComment = async (
 ): Promise<ApiResponse<Post>> => {
   return fetchApi(`/posts/${postId}/comments`, {
     method: 'POST',
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({
+      content,
+      author_name: "Demo User", // Placeholder
+      author_avatar: "https://github.com/shadcn.png" // Placeholder
+    }),
   });
 };
 
@@ -249,52 +373,184 @@ export const verifyPayment = async (
  * Extract skills from resume/text
  * TODO: Backend calls AI model to extract skills
  */
-export const extractSkills = async (
-  file?: File,
-  text?: string
-): Promise<ApiResponse<SkillExtractionResult>> => {
-  if (file) {
-    const formData = new FormData();
-    formData.append('resume', file);
-    
-    const token = localStorage.getItem('auth_token');
-    return fetch(`${API_BASE_URL}/ai/skill-extract`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-      body: formData,
-    }).then(res => res.json());
+// AI Features
+export const extractSkills = async (file?: File, text?: string): Promise<ApiResponse<SkillExtractionResult>> => {
+  try {
+    if (file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('http://localhost:8000/analyze-resume', {
+        method: 'POST',
+        body: formData, // Content-Type header is automatically set by browser for FormData
+      });
+      const data = await res.json();
+      return { data };
+    } else if (text) {
+      const formData = new FormData();
+      formData.append('text', text);
+
+      const res = await fetch('http://localhost:8000/analyze-resume', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      return { data };
+    }
+    return { error: "No input provided" };
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    return { error: "Failed to connect to AI service" };
   }
-
-  return fetchApi('/ai/skill-extract', {
-    method: 'POST',
-    body: JSON.stringify({ text }),
-  });
 };
 
-/**
- * Get match score between job and applicant
- * TODO: Backend calls AI model to compute match
- */
-export const getMatchScore = async (
-  jobId: string,
-  profileSummary?: string
-): Promise<ApiResponse<MatchResult>> => {
-  return fetchApi('/ai/match', {
-    method: 'POST',
-    body: JSON.stringify({ jobId, profileSummary }),
-  });
+export const getMatchScore = async (jobDescription: string, resumeText: string): Promise<ApiResponse<MatchResult>> => {
+  try {
+    const res = await fetch('http://localhost:8000/match-job', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resume_text: resumeText,
+        job_description: jobDescription
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { error: errData.detail || `Server error: ${res.status}` };
+    }
+
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    return { error: "Failed to connect to AI service" };
+  }
 };
 
-/**
- * Get AI recommendations
- * TODO: Backend returns AI-powered recommendations
- */
-export const getAiRecommendations = async (
-  type: 'jobs' | 'skills' | 'connections'
-): Promise<ApiResponse<string[]>> => {
-  return fetchApi(`/ai/recommend?type=${type}`);
+export const getAiRecommendations = async (jobs: Job[], profile: string): Promise<ApiResponse<any[]>> => {
+  try {
+    const res = await fetch('http://localhost:8000/recommend-jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobs: jobs.map(j => ({
+          id: j.id,
+          title: j.title,
+          description: j.description,
+          skills: j.skills || []
+        })),
+        profile
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { error: errData.detail || `Server error: ${res.status}` };
+    }
+
+    const data = await res.json();
+    return { data: data.recommendations };
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+export const generateCareerRoadmap = async (resumeText: string, skills: string[], desiredRole: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await fetch('http://localhost:8000/generate-roadmap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        resume_text: resumeText,
+        skills: skills,
+        desired_role: desiredRole
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { error: errData.detail || `Server error: ${res.status}` };
+    }
+
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    console.error('AI Service Error:', error);
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+
+export const generateInterviewQuestion = async (resumeText: string, jobDescription: string, difficulty: string, type: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await fetch('http://localhost:8000/generate-interview-question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resume_text: resumeText, job_description: jobDescription, difficulty, type })
+    });
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+export const evaluateInterviewAnswer = async (question: string, answer: string, jobDescription: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await fetch('http://localhost:8000/evaluate-interview-answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, answer, job_description: jobDescription })
+    });
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+export const generateAptitudeQuestion = async (topic: string, difficulty: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await fetch('http://localhost:8000/generate-aptitude-question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, difficulty })
+    });
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+export const evaluateAptitudeAnswer = async (question: string, answer: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await fetch('http://localhost:8000/evaluate-aptitude-answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, answer })
+    });
+    const data = await res.json();
+    return { data };
+  } catch (error) {
+    return { error: "Failed to connect to AI service" };
+  }
+};
+
+export const chatWithAI = async (message: string, history: any[]): Promise<ApiResponse<string>> => {
+  try {
+    const res = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history })
+    });
+    const data = await res.json();
+    return { data: data.message };
+  } catch (error) {
+    return { error: "Failed to connect to AI service" };
+  }
 };
 
 export default {
@@ -312,6 +568,7 @@ export default {
   // Feed
   getFeedPosts,
   createPost,
+  deletePost,
   togglePostLike,
   addComment,
   // Payments
@@ -320,4 +577,12 @@ export default {
   extractSkills,
   getMatchScore,
   getAiRecommendations,
+  chatWithAI,
+  generateCareerRoadmap,
+  // Interview
+  generateInterviewQuestion,
+  evaluateInterviewAnswer,
+  // Aptitude
+  generateAptitudeQuestion,
+  evaluateAptitudeAnswer
 };

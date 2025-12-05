@@ -1,14 +1,14 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   React.useEffect(() => {
@@ -35,6 +35,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
+
+
+  // Check if profile is complete
+  // We allow access to /profile even if incomplete, obviously
+  // We might also want to allow /connect-wallet or other setup pages
+  /*
+  if (user && !user.profileComplete && location.pathname !== '/profile' && location.pathname !== '/connect-wallet') {
+    // Only show toast if we are actually redirecting
+    // We use a ref or just rely on the fact that this component re-renders
+    // But to avoid toast spam, maybe just redirect silently or show once.
+    // For now, let's just redirect.
+    return <Navigate to="/profile" replace />;
+  }
+  */
 
   return <>{children}</>;
 };

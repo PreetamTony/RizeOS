@@ -1,73 +1,126 @@
-# Welcome to your Lovable project
+# JobMate 2.0 - Decentralized Job & Networking Portal
 
-## Project info
+JobMate 2.0 is a cutting-edge full-stack application that bridges the gap between Web2 recruitment and Web3 payments, enhanced with AI-powered features. It allows users to create professional profiles, post jobs with crypto payments, and find matches using AI.
 
-**URL**: https://lovable.dev/projects/107ce3a4-cd05-45f4-a099-fc535af8e978
+## 🚀 Features
 
-## How can I edit this code?
+### 1. Authentication & Profile Management
+- **Secure Auth**: JWT-based authentication with secure session management.
+- **Rich Profiles**: Users can create detailed profiles with:
+  - Professional Title & Bio
+  - Social Links (LinkedIn)
+  - **AI Skill Extraction**: Upload a resume (PDF/DOCX) to automatically extract and verify skills.
+  - **Wallet Integration**: Link MetaMask (EVM) or Phantom (Solana) wallets.
 
-There are several ways of editing your application.
+### 2. Job Board & Social Feed
+- **Job Posting**: Employers can post detailed job listings.
+- **Crypto Payments**: Posting a job requires a small platform fee paid in ETH (EVM) or SOL (Solana).
+- **Social Feed**: A professional feed to share insights, updates, and media.
+- **Advanced Filtering**: Filter jobs by skills, location, budget, and tags.
 
-**Use Lovable**
+### 3. AI Suite
+- **Resume Parsing**: Extracts skills and experience from resumes.
+- **Job Matching**: Calculates a "Match Score" between a candidate's profile and a job description.
+- **Smart Recommendations**: AI-curated job and connection suggestions.
+- **Career Roadmap**: Generates a personalized 3-month learning path based on skill gaps.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/107ce3a4-cd05-45f4-a099-fc535af8e978) and start prompting.
+### 4. Web3 Integration
+- **Multi-Chain Support**: Supports both Ethereum (via Ethers.js) and Solana (via Web3.js).
+- **Payment Verification**: Backend verifies on-chain transactions before activating job posts.
+- **NFT Skill Passport**: (Bonus) Mint verified skills as Soulbound Tokens on Solana.
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tech Stack
 
-**Use your preferred IDE**
+### Frontend
+- **Framework**: React.js (Vite)
+- **Styling**: Tailwind CSS, Lucide React (Icons)
+- **State Management**: React Context API
+- **Web3**: `@solana/web3.js`, `ethers`
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB (Mongoose)
+- **File Handling**: Multer (Local storage)
+- **AI Service**: Python (FastAPI/Flask) or Node.js integration
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 📂 Project Structure
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+jobmate2.0/
+├── src/                # Frontend Source
+│   ├── components/     # Reusable UI components
+│   ├── pages/          # Application pages (Feed, Jobs, Profile, etc.)
+│   ├── services/       # API and AI service integrations
+│   ├── hooks/          # Custom React hooks (useAuth, useWallet, useAI)
+│   └── types/          # TypeScript definitions
+├── backend/            # Node.js Backend
+│   ├── src/
+│   │   ├── controllers/# Route logic
+│   │   ├── models/     # Mongoose schemas
+│   │   ├── routes/     # API endpoints
+│   │   └── middleware/ # Auth and Upload middleware
+│   └── uploads/        # Stored resume/avatar files
+└── ai-service/         # Python AI Service (Optional/Microservice)
 ```
 
-**Edit a file directly in GitHub**
+## 🚦 Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
+- Node.js (v16+)
+- MongoDB (Local or Atlas)
+- Python 3.8+ (for AI service)
+- MetaMask or Phantom Wallet extension
 
-**Use GitHub Codespaces**
+### Installation
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/jobmate.git
+    cd jobmate2.0
+    ```
 
-## What technologies are used for this project?
+2.  **Frontend Setup**
+    ```bash
+    npm install
+    # Create .env file
+    echo "VITE_API_BASE_URL=http://localhost:5000/api" > .env
+    npm run dev
+    ```
 
-This project is built with:
+3.  **Backend Setup**
+    ```bash
+    cd backend
+    npm install
+    # Create .env file
+    # Add: PORT=5000, MONGO_URI=..., JWT_SECRET=..., ADMIN_WALLET_EVM=..., ADMIN_WALLET_SOLANA=...
+    npm run dev
+    ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+4.  **AI Service Setup** (Optional)
+    ```bash
+    cd ai-service
+    pip install -r requirements.txt
+    python main.py
+    ```
 
-## How can I deploy this project?
+## 🔄 User Flow
 
-Simply open [Lovable](https://lovable.dev/projects/107ce3a4-cd05-45f4-a099-fc535af8e978) and click on Share -> Publish.
+1.  **Sign Up**: User registers and logs in.
+2.  **Profile Setup**: User updates profile, uploads resume to extract skills, and connects wallet.
+3.  **Job Search**: User browses jobs, filters by skills, and checks "Match Score".
+4.  **Post Job**:
+    - Employer fills job details.
+    - Clicks "Pay & Post".
+    - Signs transaction in Wallet.
+    - Backend verifies payment and publishes job.
+5.  **Networking**: User posts updates on the Feed and interacts with others.
 
-## Can I connect a custom domain to my Lovable project?
+## 🛡️ Security
+- **JWT**: Secure stateless authentication.
+- **Password Hashing**: Bcrypt for password encryption.
+- **Input Validation**: Mongoose schema validation.
+- **Payment Verification**: Server-side verification of blockchain transactions.
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+Built for RizeOS Core Team Internship Assessment.

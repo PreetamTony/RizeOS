@@ -1,32 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Briefcase, 
-  MapPin, 
-  DollarSign, 
-  Link as LinkIcon,
-  Plus,
-  X,
-  Loader2,
-  Wallet,
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { useWallet } from '@/hooks/useWallet';
 import api from '@/services/api';
-import { toast } from '@/hooks/use-toast';
+import {
+  AlertCircle,
+  Briefcase,
+  CheckCircle2,
+  IndianRupee,
+  Link as LinkIcon,
+  Loader2,
+  MapPin,
+  Plus,
+  Wallet,
+  X
+} from 'lucide-react';
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type PaymentStatus = 'idle' | 'waiting' | 'submitted' | 'verifying' | 'verified' | 'failed';
 
 const PostJob: React.FC = () => {
   const navigate = useNavigate();
   const { connected, address, sendPayment, chain } = useWallet();
-  
+
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -41,7 +42,7 @@ const PostJob: React.FC = () => {
   const [skills, setSkills] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  
+
   // Payment state
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -80,26 +81,53 @@ const PostJob: React.FC = () => {
       return;
     }
 
+    if (!title.trim()) {
+      toast({
+        title: "Missing Title",
+        description: "Please enter a job title",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!description.trim()) {
+      toast({
+        title: "Missing Description",
+        description: "Please enter a job description",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (skills.length === 0) {
+      toast({
+        title: "Missing Skills",
+        description: "Please add at least one skill (press Enter to add)",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Step 1: Initiate payment
       setPaymentStatus('waiting');
-      
+
       const result = await sendPayment();
       if (!result) {
         throw new Error('Payment failed');
       }
-      
+
       setTxHash(result.txHash);
       setPaymentStatus('submitted');
 
       // Step 2: Verify payment
       setPaymentStatus('verifying');
       const verifyResponse = await api.verifyPayment(result.txHash, chain!);
-      
+
       if (verifyResponse.error || verifyResponse.data?.status !== 'verified') {
         throw new Error(verifyResponse.error || 'Payment verification failed');
       }
-      
+
       setPaymentStatus('verified');
 
       // Step 3: Submit job
@@ -112,7 +140,7 @@ const PostJob: React.FC = () => {
         budget: {
           min: budgetMin ? Number(budgetMin) : undefined,
           max: budgetMax ? Number(budgetMax) : undefined,
-          currency: '$',
+          currency: '₹',
           type: budgetType,
         },
         location: location || undefined,
@@ -262,7 +290,7 @@ const PostJob: React.FC = () => {
               <label className="text-sm font-medium">Budget / Salary</label>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="number"
                     placeholder="Min"
@@ -272,7 +300,7 @@ const PostJob: React.FC = () => {
                   />
                 </div>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="number"
                     placeholder="Max"
@@ -377,11 +405,10 @@ const PostJob: React.FC = () => {
 
             {/* Payment Status */}
             {paymentStatus !== 'idle' && (
-              <Card className={`${
-                paymentStatus === 'verified' ? 'bg-success/10 border-success/30' :
+              <Card className={`${paymentStatus === 'verified' ? 'bg-success/10 border-success/30' :
                 paymentStatus === 'failed' ? 'bg-destructive/10 border-destructive/30' :
-                'bg-primary/5 border-primary/20'
-              }`}>
+                  'bg-primary/5 border-primary/20'
+                }`}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     {paymentStatus === 'waiting' && (
@@ -435,33 +462,104 @@ const PostJob: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-mono font-semibold">0.00001 ETH</p>
-                  <p className="text-xs text-muted-foreground">≈ $0.03</p>
+                  <p className="text-xs text-muted-foreground">≈ ₹2.50</p>
                 </div>
               </div>
-              
-              <Button
-                variant="hero"
-                className="w-full"
-                onClick={handlePayAndSubmit}
-                disabled={!isFormValid || !connected || isSubmitting || paymentStatus !== 'idle' && paymentStatus !== 'failed'}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : !connected ? (
-                  <>
-                    <Wallet className="w-5 h-5" />
-                    Connect Wallet to Post
-                  </>
-                ) : (
-                  <>
-                    <Briefcase className="w-5 h-5" />
-                    Pay & Post Job
-                  </>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  variant="hero"
+                  className="w-full"
+                  onClick={handlePayAndSubmit}
+                  disabled={isSubmitting || (paymentStatus !== 'idle' && paymentStatus !== 'failed')}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : !connected ? (
+                    <>
+                      <Wallet className="w-5 h-5" />
+                      Connect Wallet to Post
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase className="w-5 h-5" />
+                      Pay & Post Job
+                    </>
+                  )}
+                </Button>
+
+                {/* Dev Helper: Mock Payment */}
+                {import.meta.env.DEV && connected && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-dashed border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                    onClick={async () => {
+                      try {
+                        setPaymentStatus('waiting');
+                        // Simulate delay
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        const mockHash = `mock_${Date.now()}`;
+                        setTxHash(mockHash);
+                        setPaymentStatus('submitted');
+
+                        setPaymentStatus('verifying');
+                        const verifyResponse = await api.verifyPayment(mockHash, chain!);
+
+                        if (verifyResponse.error || verifyResponse.data?.status !== 'verified') {
+                          throw new Error(verifyResponse.error || 'Payment verification failed');
+                        }
+
+                        setPaymentStatus('verified');
+
+                        // Proceed to submit
+                        setIsSubmitting(true);
+                        const jobResponse = await api.createJob({
+                          title,
+                          description,
+                          company: company || undefined,
+                          skills: skills,
+                          budget: {
+                            min: budgetMin ? Number(budgetMin) : undefined,
+                            max: budgetMax ? Number(budgetMax) : undefined,
+                            currency: '$',
+                            type: budgetType,
+                          },
+                          location: location || undefined,
+                          remote: isRemote,
+                          tags,
+                          applicationLink: applicationLink || undefined,
+                          status: 'active',
+                        });
+
+                        if (jobResponse.error) {
+                          throw new Error(jobResponse.error);
+                        }
+
+                        toast({
+                          title: "Job posted successfully! (Mock)",
+                          description: "Your job listing is now live.",
+                        });
+
+                        navigate('/jobs');
+                      } catch (error) {
+                        setPaymentStatus('failed');
+                        toast({
+                          title: "Mock Payment Failed",
+                          description: error instanceof Error ? error.message : 'Unknown error',
+                          variant: "destructive",
+                        });
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  >
+                    ⚠️ Dev: Mock Payment & Post
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

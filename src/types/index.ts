@@ -3,13 +3,19 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  name?: string; // Backend field
   fullName?: string;
+  title?: string;
   bio?: string;
   linkedinUrl?: string;
   resumeUrl?: string;
   skills: string[];
   walletAddress?: string;
   avatarUrl?: string;
+  profile?: { // Backend field
+    avatar?: string;
+    title?: string;
+  };
   profileComplete: boolean;
   createdAt: string;
   updatedAt: string;
@@ -21,7 +27,7 @@ export interface Job {
   title: string;
   description: string;
   company?: string;
-  requiredSkills: string[];
+  skills: string[];
   budget?: {
     min?: number;
     max?: number;
@@ -54,7 +60,8 @@ export interface Post {
   id: string;
   content: string;
   authorId: string;
-  author?: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  author?: Pick<User, 'id' | 'displayName' | 'avatarUrl' | 'name' | 'profile'>;
+  image?: string;
   likes: number;
   likedByUser?: boolean;
   comments: Comment[];
@@ -66,7 +73,7 @@ export interface Comment {
   id: string;
   content: string;
   authorId: string;
-  author?: Pick<User, 'id' | 'displayName' | 'avatarUrl'>;
+  author?: Pick<User, 'id' | 'displayName' | 'avatarUrl' | 'name' | 'profile'>;
   createdAt: string;
 }
 
@@ -84,8 +91,14 @@ export interface WalletState {
 }
 
 // AI types
+export interface Skill {
+  name: string;
+  level: 'Beginner' | 'Intermediate' | 'Expert';
+}
+
 export interface SkillExtractionResult {
-  skills: string[];
+  skills: Skill[] | string[]; // Support both for backward compatibility
+  summary?: string;
   confidence: number;
 }
 

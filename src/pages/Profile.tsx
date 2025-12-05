@@ -1,48 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Mail, 
-  Linkedin, 
-  FileText, 
-  Wallet,
-  Edit2,
-  Save,
-  X,
-  Upload,
-  Sparkles,
-  Loader2
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWallet } from '@/hooks/useWallet';
-import { useAI } from '@/hooks/useAI';
-import api from '@/services/api';
 import { toast } from '@/hooks/use-toast';
+import { useAI } from '@/hooks/useAI';
+import { useWallet } from '@/hooks/useWallet';
+import { cn } from '@/lib/utils';
+import api from '@/services/api';
+import {
+  Edit2,
+  FileText,
+  Linkedin,
+  Loader2,
+  Mail,
+  Save,
+  Sparkles,
+  Upload,
+  User,
+  Wallet,
+  X
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const { connected, address } = useWallet();
   const { extractSkills, isExtracting } = useAI();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Form state
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [title, setTitle] = useState(user?.title || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [linkedinUrl, setLinkedinUrl] = useState(user?.linkedinUrl || '');
   const [skills, setSkills] = useState<string[]>(user?.skills || []);
   const [skillInput, setSkillInput] = useState('');
 
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
       setDisplayName(user.displayName || '');
+      setTitle(user.title || '');
       setBio(user.bio || '');
       setLinkedinUrl(user.linkedinUrl || '');
       setSkills(user.skills || []);
@@ -64,13 +69,20 @@ const Profile: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setResumeFile(file); // Store file for upload on save
+
+    // Optional: Still extract skills for immediate feedback
     const result = await extractSkills(file);
     if (result) {
-      const newSkills = [...new Set([...skills, ...result.skills])];
+      const extractedSkills = result.skills || [];
+      // Ensure we have strings
+      const skillStrings = extractedSkills.map((s: any) => typeof s === 'string' ? s : s.name);
+
+      const newSkills = [...new Set([...skills, ...skillStrings])];
       setSkills(newSkills);
       toast({
         title: "Skills extracted!",
-        description: `Found ${result.skills.length} skills from your resume.`,
+        description: `Found ${skillStrings.length} skills from your resume.`,
       });
     }
   };
@@ -81,10 +93,12 @@ const Profile: React.FC = () => {
       const response = await api.updateUserProfile({
         fullName,
         displayName,
+        title,
         bio,
         linkedinUrl,
         skills,
         walletAddress: address || undefined,
+        resume: resumeFile || undefined,
       });
 
       if (response.error) {
@@ -160,8 +174,8 @@ const Profile: React.FC = () => {
               {/* Avatar */}
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0">
                 {user?.avatarUrl ? (
-                  <img 
-                    src={user.avatarUrl} 
+                  <img
+                    src={user.avatarUrl}
                     alt={user.displayName}
                     className="w-full h-full rounded-2xl object-cover"
                   />
@@ -171,7 +185,7 @@ const Profile: React.FC = () => {
                   </span>
                 )}
               </div>
-              
+
               <div className="flex-1 space-y-4 w-full">
                 {/* Name */}
                 <div>
@@ -193,12 +207,23 @@ const Profile: React.FC = () => {
                           placeholder="johndoe"
                         />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Professional Title</label>
+                        <Input
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Software Engineer"
+                        />
+                      </div>
                     </div>
                   ) : (
                     <>
                       <h2 className="text-2xl font-bold font-display">
                         {fullName || displayName || 'Unnamed User'}
                       </h2>
+                      {title && (
+                        <p className="text-lg text-primary font-medium">{title}</p>
+                      )}
                       {fullName && displayName && fullName !== displayName && (
                         <p className="text-muted-foreground">@{displayName}</p>
                       )}
@@ -227,7 +252,7 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
                 ) : linkedinUrl ? (
-                  <a 
+                  <a
                     href={linkedinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -314,13 +339,13 @@ const Profile: React.FC = () => {
                 </Button>
               </div>
             )}
-            
+
             {skills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill) => (
-                  <Badge 
-                    key={skill} 
-                    variant="skill" 
+                  <Badge
+                    key={skill}
+                    variant="skill"
                     className={`text-sm py-1.5 px-3 ${isEditing ? 'pr-1.5' : ''}`}
                   >
                     {skill}
@@ -358,30 +383,46 @@ const Profile: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText className="w-8 h-8 text-primary" />
                   <div>
-                    <p className="font-medium">resume.pdf</p>
-                    <p className="text-sm text-muted-foreground">Uploaded recently</p>
+                    <a
+                      href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${user.resumeUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium hover:underline"
+                    >
+                      View Uploaded Resume
+                    </a>
+                    <p className="text-sm text-muted-foreground">
+                      {resumeFile ? `New file selected: ${resumeFile.name}` : 'Uploaded previously'}
+                    </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
-                  View
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${user.resumeUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View
+                  </a>
                 </Button>
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-3">No resume uploaded</p>
+                <p className="text-muted-foreground mb-3">
+                  {resumeFile ? `Selected: ${resumeFile.name}` : 'No resume uploaded'}
+                </p>
                 <label className="cursor-pointer">
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx"
                     className="hidden"
+                    onChange={handleResumeUpload}
                   />
-                  <Button variant="outline" asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Resume
-                    </span>
-                  </Button>
+                  <div className={cn(buttonVariants({ variant: "outline" }), "cursor-pointer")}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {resumeFile ? 'Change Resume' : 'Upload Resume'}
+                  </div>
                 </label>
               </div>
             )}
