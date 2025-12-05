@@ -22,7 +22,8 @@ import type {
 
 // API Base URL from environment
 // API Base URL from environment or default to local Python backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
 
 // Helper to get auth headers
 const getAuthHeaders = (): HeadersInit => {
@@ -380,7 +381,7 @@ export const extractSkills = async (file?: File, text?: string): Promise<ApiResp
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('http://localhost:8000/analyze-resume', {
+      const res = await fetch(`${AI_SERVICE_URL}/analyze-resume`, {
         method: 'POST',
         body: formData, // Content-Type header is automatically set by browser for FormData
       });
@@ -390,7 +391,7 @@ export const extractSkills = async (file?: File, text?: string): Promise<ApiResp
       const formData = new FormData();
       formData.append('text', text);
 
-      const res = await fetch('http://localhost:8000/analyze-resume', {
+      const res = await fetch(`${AI_SERVICE_URL}/analyze-resume`, {
         method: 'POST',
         body: formData,
       });
@@ -406,7 +407,7 @@ export const extractSkills = async (file?: File, text?: string): Promise<ApiResp
 
 export const getMatchScore = async (jobDescription: string, resumeText: string): Promise<ApiResponse<MatchResult>> => {
   try {
-    const res = await fetch('http://localhost:8000/match-job', {
+    const res = await fetch(`${AI_SERVICE_URL}/match-job`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -430,7 +431,7 @@ export const getMatchScore = async (jobDescription: string, resumeText: string):
 
 export const getAiRecommendations = async (jobs: Job[], profile: string): Promise<ApiResponse<any[]>> => {
   try {
-    const res = await fetch('http://localhost:8000/recommend-jobs', {
+    const res = await fetch(`${AI_SERVICE_URL}/recommend-jobs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -459,7 +460,7 @@ export const getAiRecommendations = async (jobs: Job[], profile: string): Promis
 
 export const generateCareerRoadmap = async (resumeText: string, skills: string[], desiredRole: string): Promise<ApiResponse<any>> => {
   try {
-    const res = await fetch('http://localhost:8000/generate-roadmap', {
+    const res = await fetch(`${AI_SERVICE_URL}/generate-roadmap`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -485,7 +486,7 @@ export const generateCareerRoadmap = async (resumeText: string, skills: string[]
 
 export const generateInterviewQuestion = async (resumeText: string, jobDescription: string, difficulty: string, type: string): Promise<ApiResponse<any>> => {
   try {
-    const res = await fetch('http://localhost:8000/generate-interview-question', {
+    const res = await fetch(`${AI_SERVICE_URL}/generate-interview-question`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resume_text: resumeText, job_description: jobDescription, difficulty, type })
@@ -499,7 +500,7 @@ export const generateInterviewQuestion = async (resumeText: string, jobDescripti
 
 export const evaluateInterviewAnswer = async (question: string, answer: string, jobDescription: string): Promise<ApiResponse<any>> => {
   try {
-    const res = await fetch('http://localhost:8000/evaluate-interview-answer', {
+    const res = await fetch(`${AI_SERVICE_URL}/evaluate-interview-answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, answer, job_description: jobDescription })
@@ -513,7 +514,7 @@ export const evaluateInterviewAnswer = async (question: string, answer: string, 
 
 export const generateAptitudeQuestion = async (topic: string, difficulty: string): Promise<ApiResponse<any>> => {
   try {
-    const res = await fetch('http://localhost:8000/generate-aptitude-question', {
+    const res = await fetch(`${AI_SERVICE_URL}/generate-aptitude-question`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic, difficulty })
@@ -527,7 +528,7 @@ export const generateAptitudeQuestion = async (topic: string, difficulty: string
 
 export const evaluateAptitudeAnswer = async (question: string, answer: string): Promise<ApiResponse<any>> => {
   try {
-    const res = await fetch('http://localhost:8000/evaluate-aptitude-answer', {
+    const res = await fetch(`${AI_SERVICE_URL}/evaluate-aptitude-answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, answer })
@@ -541,7 +542,9 @@ export const evaluateAptitudeAnswer = async (question: string, answer: string): 
 
 export const chatWithAI = async (message: string, history: any[]): Promise<ApiResponse<string>> => {
   try {
-    const res = await fetch('http://localhost:8000/chat', {
+    const AI_SERVICE_URL = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
+
+    const res = await fetch(`${AI_SERVICE_URL}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history })
