@@ -10,8 +10,7 @@ const PLATFORM_FEE_WEI = process.env.PLATFORM_FEE_WEI || '10000000000000'; // 0.
 const PLATFORM_FEE_SOL = 0.0001; // 0.0001 SOL
 const LAMPORTS_PER_SOL = 1000000000;
 
-// Providers
-// Use public RPCs for dev if not provided
+
 const EVM_RPC_URL = process.env.EVM_RPC_URL || 'https://rpc.ankr.com/eth_goerli'; // Default to Goerli
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 
@@ -62,9 +61,7 @@ export const verifyPayment = async (req, res) => {
                     });
                 }
 
-                // Verify amount
-                // Allow small margin of error or exact match? Exact match for now.
-                // Note: tx.value is BigInt in ethers v6
+
                 if (tx.value.toString() !== PLATFORM_FEE_WEI) {
                     // Check if it's greater or equal, maybe?
                     if (BigInt(tx.value) < BigInt(PLATFORM_FEE_WEI)) {
@@ -131,12 +128,7 @@ export const verifyPayment = async (req, res) => {
                 let amount = 0;
                 let sender = '';
 
-                // Handle parsed instructions
-                // This is simplified; in production need to handle inner instructions and different program types
-                // Assuming simple SystemProgram transfer
 
-                // We need to look at pre/post balances or parsed instructions
-                // Let's look at account keys to find sender and receiver
                 const accountKeys = tx.transaction.message.accountKeys;
                 const adminPubkey = ADMIN_WALLET_SOLANA;
 

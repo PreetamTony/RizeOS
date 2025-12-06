@@ -1,32 +1,21 @@
 import Job from '../models/Job.js';
 import ErrorResponse from '../utils/errorResponse.js';
 
-// @desc    Get all jobs
-// @route   GET /api/jobs
-// @access  Public
 export const getJobs = async (req, res, next) => {
     try {
         let query;
 
-        // Copy req.query
         const reqQuery = { ...req.query };
 
-        // Fields to exclude
         const removeFields = ['select', 'sort', 'page', 'limit', 'search', 'skills', 'tags', 'minBudget', 'maxBudget', 'location'];
 
-        // Loop over removeFields and delete them from reqQuery
         removeFields.forEach(param => delete reqQuery[param]);
 
-        // Create query string
         let queryStr = JSON.stringify(reqQuery);
-
-        // Create operators ($gt, $gte, etc)
         queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
-        // Finding resource
         let filter = JSON.parse(queryStr);
 
-        // Search by keyword
         if (req.query.search) {
             filter.$or = [
                 { title: { $regex: req.query.search, $options: 'i' } },
@@ -35,45 +24,30 @@ export const getJobs = async (req, res, next) => {
             ];
         }
 
-        // Filter by skills (array overlap)
         if (req.query.skills) {
             const skills = req.query.skills.split(',');
             filter.skills = { $in: skills.map(s => new RegExp(s, 'i')) };
         }
 
-        // Filter by tags
         if (req.query.tags) {
             const tags = req.query.tags.split(',');
             filter.tags = { $in: tags.map(t => new RegExp(t, 'i')) };
         }
 
-        // Only show active jobs by default unless specified
         if (!filter.status) {
             filter.status = 'active';
         }
 
-        // Location filter (regex)
         if (req.query.location) {
             filter.location = { $regex: req.query.location, $options: 'i' };
         }
 
-        // Budget filtering
         if (req.query.minBudget || req.query.maxBudget) {
             filter['budget.min'] = {};
             if (req.query.minBudget) {
                 filter['budget.min'].$gte = Number(req.query.minBudget);
             }
-            // For max budget, we want jobs where the max budget offered is at least what the user wants?
-            // Or jobs where the budget is within the user's range?
-            // Usually:
-            // User minBudget: "I want at least 50k" -> job.budget.max >= 50k OR job.budget.min >= 50k
-            // User maxBudget: "I want up to 100k" (this is weird for a job seeker, usually they want MINIMUM).
-            // Let's assume the filters mean:
-            // minBudget: Show jobs where budget.max >= minBudget (i.e., the job CAN pay this much)
 
-            // However, standard implementation:
-            // minBudget -> job.budget.min >= minBudget
-            // maxBudget -> job.budget.max <= maxBudget
 
             if (req.query.maxBudget) {
                 if (!filter['budget.max']) filter['budget.max'] = {};
@@ -146,9 +120,6 @@ export const getJobs = async (req, res, next) => {
     }
 };
 
-// @desc    Get single job
-// @route   GET /api/jobs/:id
-// @access  Public
 export const getJob = async (req, res, next) => {
     try {
         const job = await Job.findById(req.params.id).populate('postedBy', 'name email profile');
@@ -166,17 +137,9 @@ export const getJob = async (req, res, next) => {
     }
 };
 
-// @desc    Create new job
-// @route   POST /api/jobs
-// @access  Private
 export const createJob = async (req, res, next) => {
     try {
-        // Add user to req.body
         req.body.postedBy = req.user.id;
-
-        // Check for published job
-        // If user is not an admin, they can only add a certain number of jobs? 
-        // For now, no limit.
 
         const job = await Job.create(req.body);
 
@@ -219,9 +182,6 @@ export const updateJob = async (req, res, next) => {
     }
 };
 
-// @desc    Delete job
-// @route   DELETE /api/jobs/:id
-// @access  Private
 export const deleteJob = async (req, res, next) => {
     try {
         const job = await Job.findById(req.params.id);

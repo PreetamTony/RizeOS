@@ -15,13 +15,13 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize Groq client
+
 client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
@@ -53,7 +53,6 @@ async def analyze_resume(
                 for page in pdf.pages:
                     resume_content += page.extract_text() + "\n"
             else:
-                # Assume text/plain or similar
                 resume_content = content.decode('utf-8')
         elif text:
             resume_content = text
@@ -76,8 +75,6 @@ async def analyze_resume(
         Resume Text:
         {resume_content[:10000]} 
         """
-        # Truncate to avoid token limits if PDF is huge
-
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile", 
             messages=[
@@ -117,7 +114,7 @@ async def match_job(request: MatchRequest):
         """
 
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile", # Using Llama 3.3 for robust JSON handling
+            model="llama-3.3-70b-versatile", 
             messages=[
                 {"role": "system", "content": "You are an expert ATS system. Always respond in valid JSON."},
                 {"role": "user", "content": prompt}
@@ -140,11 +137,9 @@ async def chat(request: ChatRequest):
             {"role": "system", "content": "You are JobMate AI, a helpful career assistant. You help users with job search, interview prep, and career advice."}
         ]
         
-        # Add history
         for msg in request.history:
             messages.append(msg)
             
-        # Add current message
         messages.append({"role": "user", "content": request.message})
 
         completion = client.chat.completions.create(
@@ -152,7 +147,7 @@ async def chat(request: ChatRequest):
             messages=messages,
             temperature=0.7,
             max_tokens=1024,
-            stream=False # For simplicity in this v1, we'll do non-streaming first. Frontend can be updated to stream later.
+            stream=False
         )
 
         return {"message": completion.choices[0].message.content}
@@ -173,7 +168,6 @@ class RecommendationRequest(BaseModel):
 @app.post("/recommend-jobs")
 async def recommend_jobs(request: RecommendationRequest):
     try:
-        # Create a concise representation of jobs for the prompt
         jobs_text = ""
         for job in request.jobs:
             jobs_text += f"ID: {job.id}\nTitle: {job.title}\nSkills: {', '.join(job.skills)}\nDescription: {job.description[:200]}...\n\n"
@@ -285,7 +279,7 @@ class InterviewQuestionRequest(BaseModel):
     resume_text: str
     job_description: str
     difficulty: str
-    type: str  # "Technical" or "Behavioral"
+    type: str  
 
 class InterviewEvaluationRequest(BaseModel):
     question: str

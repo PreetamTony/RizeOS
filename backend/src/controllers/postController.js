@@ -1,9 +1,6 @@
 import Post from '../models/Post.js';
 import ErrorResponse from '../utils/errorResponse.js';
 
-// @desc    Get all posts (Feed)
-// @route   GET /api/posts
-// @access  Public
 export const getPosts = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;

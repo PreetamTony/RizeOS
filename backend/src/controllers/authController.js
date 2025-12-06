@@ -11,7 +11,6 @@ export const firebaseLogin = async (req, res, next) => {
       return next(new ErrorResponse('Please provide a Firebase ID token', 400));
     }
 
-    // Verify token
     let decodedToken;
     try {
       console.log('Verifying Firebase ID token...');
@@ -19,24 +18,21 @@ export const firebaseLogin = async (req, res, next) => {
       console.log('Token verified for user:', decodedToken.email);
     } catch (error) {
       console.error('Firebase token verification failed:', error);
-      // Log the full error object for debugging
       console.error(JSON.stringify(error, null, 2));
       return next(new ErrorResponse('Invalid token', 401));
     }
 
     const { email, name, picture, uid } = decodedToken;
 
-    // Check if user exists
     let user = await User.findOne({ email });
 
     if (!user) {
       try {
-        // Create new user
         user = await User.create({
           name: name || 'User',
           email,
-          password: crypto.randomBytes(16).toString('hex'), // Random password for social login
-          isEmailVerified: true, // Google emails are verified
+          password: crypto.randomBytes(16).toString('hex'),
+          isEmailVerified: true,
           profile: {
             social: {
               website: '',
@@ -48,7 +44,6 @@ export const firebaseLogin = async (req, res, next) => {
         });
       } catch (err) {
         if (err.code === 11000) {
-          // Race condition: User was created by a parallel request
           console.log('Duplicate key error caught (race condition), fetching user...');
           user = await User.findOne({ email });
           if (!user) {
@@ -85,8 +80,6 @@ export const register = async (req, res, next) => {
     // Generate email verification token
     const emailVerificationToken = user.generateEmailVerificationToken();
     await user.save({ validateBeforeSave: false });
-
-    // TODO: Send verification email
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
@@ -176,9 +169,6 @@ const sendTokenResponse = (user, statusCode, res) => {
     });
 };
 
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
-// @access  Private
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
@@ -210,9 +200,6 @@ export const getMe = async (req, res, next) => {
   }
 };
 
-// @desc    Log user out / clear cookie
-// @route   GET /api/auth/logout
-// @access  Private
 export const logout = async (req, res, next) => {
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
@@ -225,9 +212,6 @@ export const logout = async (req, res, next) => {
   });
 };
 
-// @desc    Update user details
-// @route   PUT /api/auth/updatedetails
-// @access  Private
 export const updateDetails = async (req, res, next) => {
   try {
     const fieldsToUpdate = {
@@ -240,7 +224,6 @@ export const updateDetails = async (req, res, next) => {
       'profile.walletAddress': req.body.walletAddress
     };
 
-    // Handle nested profile updates if passed as an object
     if (req.body.profile) {
       if (req.body.profile.bio) fieldsToUpdate['profile.bio'] = req.body.profile.bio;
       if (req.body.profile.title) fieldsToUpdate['profile.title'] = req.body.profile.title;
@@ -253,10 +236,9 @@ export const updateDetails = async (req, res, next) => {
       }
     }
 
-    // Map frontend specific fields if they come flat
     if (req.body.fullName) {
       fieldsToUpdate.fullName = req.body.fullName;
-      fieldsToUpdate.name = req.body.fullName; // Keep name synced with fullName for backward compatibility
+      fieldsToUpdate.name = req.body.fullName;
     }
     if (req.body.displayName) fieldsToUpdate.displayName = req.body.displayName;
     if (req.body.title) fieldsToUpdate['profile.title'] = req.body.title;
@@ -264,7 +246,6 @@ export const updateDetails = async (req, res, next) => {
     if (req.body.linkedinUrl) fieldsToUpdate['profile.social.linkedin'] = req.body.linkedinUrl;
 
     if (req.body.skills) {
-      // Ensure skills is an array (Multer might make it a string if only one item)
       let skills = req.body.skills;
       if (typeof skills === 'string') {
         skills = [skills];
@@ -318,14 +299,10 @@ export const updateDetails = async (req, res, next) => {
   }
 };
 
-// @desc    Update password
-// @route   PUT /api/auth/updatepassword
-// @access  Private
 export const updatePassword = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('+password');
 
-    // Check current password
     if (!(await user.matchPassword(req.body.currentPassword))) {
       return next(new ErrorResponse('Password is incorrect', 401));
     }
@@ -339,9 +316,7 @@ export const updatePassword = async (req, res, next) => {
   }
 };
 
-// @desc    Forgot password
-// @route   POST /api/auth/forgotpassword
-// @access  Public
+
 export const forgotPassword = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
@@ -375,9 +350,6 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:resettoken
-// @access  Public
 export const resetPassword = async (req, res, next) => {
   try {
     // Get hashed token
@@ -407,9 +379,6 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 
-// @desc    Verify email
-// @route   GET /api/auth/verifyemail/:verificationtoken
-// @access  Public
 export const verifyEmail = async (req, res, next) => {
   try {
     const emailVerificationToken = crypto
