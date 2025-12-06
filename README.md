@@ -72,37 +72,6 @@ jobmate2.0/
 - Python 3.8+ (for AI service)
 - MetaMask or Phantom Wallet extension
 
-### Installation
-
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/yourusername/jobmate.git
-    cd jobmate2.0
-    ```
-
-2.  **Frontend Setup**
-    ```bash
-    npm install
-    # Create .env file
-    echo "VITE_API_BASE_URL=http://localhost:5000/api" > .env
-    npm run dev
-    ```
-
-3.  **Backend Setup**
-    ```bash
-    cd backend
-    npm install
-    # Create .env file
-    # Add: PORT=5000, MONGO_URI=..., JWT_SECRET=..., ADMIN_WALLET_EVM=..., ADMIN_WALLET_SOLANA=...
-    npm run dev
-    ```
-
-4.  **AI Service Setup** (Optional)
-    ```bash
-    cd ai-service
-    pip install -r requirements.txt
-    python main.py
-    ```
 
 ## 🔄 User Flow
 
