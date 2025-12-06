@@ -1,19 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Briefcase, 
-  Sparkles, 
-  Wallet, 
-  Users, 
-  ArrowRight,
-  Zap,
-  Shield,
-  Globe,
-  TrendingUp
-} from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { AppLayout } from '@/components/layout/AppLayout';
+import {
+  ArrowRight,
+  Globe,
+  Shield,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Wallet,
+  Zap
+} from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 const features = [
   {
@@ -54,52 +53,99 @@ const Index: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 animate-fade-in">
-              <Sparkles className="w-4 h-4" />
-              <span>Powered by AI & Blockchain</span>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center mb-16 sm:mb-24">
+            {/* Left Column: Text */}
+            <div className="text-left max-w-2xl mx-auto lg:mx-0">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-fade-in">
+                <Sparkles className="w-4 h-4" />
+                <span>Powered by AI & Blockchain</span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold font-display tracking-tight mb-6 animate-fade-in animation-delay-100 leading-[1.1]">
+                Find Your Next{' '}
+                <span className="gradient-text">Dream Job</span>
+                <br />
+                with AI Precision
+              </h1>
+
+              {/* Subheadline */}
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8 animate-fade-in animation-delay-200 max-w-lg">
+                JobMate connects talented professionals with innovative companies using
+                cutting-edge AI matching and secure Web3 payments.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-4 animate-fade-in animation-delay-300">
+                <Button variant="hero" size="xl" asChild>
+                  <Link to="/login" className="gap-2">
+                    Get Started Free
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="xl" asChild>
+                  <Link to="/jobs">
+                    Browse Jobs
+                  </Link>
+                </Button>
+              </div>
             </div>
-            
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display tracking-tight mb-6 animate-fade-in animation-delay-100">
-              Find Your Next{' '}
-              <span className="gradient-text">Dream Job</span>
-              <br />
-              with AI Precision
-            </h1>
-            
-            {/* Subheadline */}
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in animation-delay-200">
-              JobMate connects talented professionals with innovative companies using 
-              cutting-edge AI matching and secure Web3 payments.
-            </p>
-            
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in animation-delay-300">
-              <Button variant="hero" size="xl" asChild>
-                <Link to="/login" className="gap-2">
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="xl" asChild>
-                <Link to="/jobs">
-                  Browse Jobs
-                </Link>
-              </Button>
+
+            {/* Right Column: Image */}
+            <div className="relative lg:h-full flex items-center justify-center animate-fade-in animation-delay-400">
+              <div className="relative w-full max-w-xl lg:max-w-none">
+                {/* Decorative Elements around image */}
+                <div className="absolute -top-4 -right-4 w-72 h-72 bg-primary/30 rounded-full blur-[100px] -z-10" />
+                <div className="absolute -bottom-8 -left-8 w-72 h-72 bg-accent/30 rounded-full blur-[100px] -z-10" />
+
+                {/* Main Image Container */}
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-card/50 backdrop-blur-sm group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <img
+                    src="/image.png"
+                    alt="JobMate Dashboard Preview"
+                    className="w-full h-auto object-cover transform transition-transform duration-700 hover:scale-105"
+                  />
+
+                  {/* Floating Badge 1 */}
+                  <div className="absolute top-6 right-6 bg-background/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-border/50 animate-float hidden sm:block">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-green-500" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Monthly Growth</div>
+                        <div className="font-bold text-sm">+128%</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floating Badge 2 */}
+                  <div className="absolute bottom-6 left-6 bg-background/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-border/50 animate-float-delayed hidden sm:block">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">New Users</div>
+                        <div className="font-bold text-sm">2.4k+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          {/* Stats */}
-          <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 animate-fade-in animation-delay-400">
+
+          {/* Stats moved below */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 animate-fade-in animation-delay-500 border-t border-border/50 pt-12">
             {stats.map((stat, index) => (
-              <div 
-                key={stat.label} 
+              <div
+                key={stat.label}
                 className="text-center"
-                style={{ animationDelay: `${400 + index * 100}ms` }}
               >
                 <div className="text-3xl sm:text-4xl font-bold font-display gradient-text mb-2">
                   {stat.value}
@@ -122,18 +168,18 @@ const Index: React.FC = () => {
               <span className="gradient-text">Succeed</span>
             </h2>
             <p className="text-muted-foreground">
-              From AI-powered job matching to secure blockchain payments, we've got all the tools 
+              From AI-powered job matching to secure blockchain payments, we've got all the tools
               you need to take your career to the next level.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card 
-                  key={feature.title} 
-                  hover 
+                <Card
+                  key={feature.title}
+                  hover
                   className="animate-fade-in"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
@@ -167,7 +213,7 @@ const Index: React.FC = () => {
               Get started in minutes and find your perfect match with our streamlined process.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
@@ -191,8 +237,8 @@ const Index: React.FC = () => {
             ].map((item, index) => {
               const Icon = item.icon;
               return (
-                <div 
-                  key={item.step} 
+                <div
+                  key={item.step}
                   className="relative animate-fade-in"
                   style={{ animationDelay: `${index * 150}ms` }}
                 >
@@ -227,10 +273,10 @@ const Index: React.FC = () => {
                 <span className="gradient-text">Future of Work</span>
               </h2>
               <p className="text-muted-foreground mb-8">
-                We're combining the best of Web3 technology with AI to create a transparent, 
+                We're combining the best of Web3 technology with AI to create a transparent,
                 secure, and efficient job marketplace. Your data, your control.
               </p>
-              
+
               <div className="space-y-4">
                 {[
                   { icon: Shield, text: 'Secure blockchain-verified transactions' },
@@ -248,7 +294,7 @@ const Index: React.FC = () => {
                   );
                 })}
               </div>
-              
+
               <Button variant="hero" size="lg" className="mt-8" asChild>
                 <Link to="/connect-wallet" className="gap-2">
                   <Wallet className="w-5 h-5" />
@@ -256,7 +302,7 @@ const Index: React.FC = () => {
                 </Link>
               </Button>
             </div>
-            
+
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl blur-3xl" />
               <Card className="relative bg-card/80 backdrop-blur-xl border-border/50">
@@ -304,7 +350,7 @@ const Index: React.FC = () => {
             <span className="gradient-text">Perfect Match?</span>
           </h2>
           <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            Join thousands of professionals who have found their dream jobs through JobMate's 
+            Join thousands of professionals who have found their dream jobs through JobMate's
             AI-powered platform.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

@@ -142,6 +142,7 @@ export default {
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "slide-in-left": "slide-in-left 0.3s ease-out",
         "float": "float 3s ease-in-out infinite",
+        "float-delayed": "float 3s ease-in-out 1.5s infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "shimmer": "shimmer 2s linear infinite",
       },
